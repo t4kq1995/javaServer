@@ -3,13 +3,14 @@ from tornado.options import define, options, parse_command_line
 import json
 import datetime
 
-define("port", default=5000, help="run on the given port", type=int)
+define("port", default=8887, help="run on the given port", type=int)
 
 cl = []
 
 maps = {
     "map_1": [
-        [13, 14, 23, 25, 31, 32, 34, 35, 41, 43, 45, 52, 53, 54, '/', "red", "red", "empty", "blue", "blue"]
+        [13, 14, 23, 25, 31, 32, 34, 35, 41, 43, 45, 52, 53, 54],
+        ["red", "red", "empty", "blue", "blue"]
     ],
     "map_2": [
         [12, 13, 14, 16, 21, 24, 25, 27, 31, 36, 41, 42,
@@ -52,11 +53,12 @@ class SocketHandler(websocket.WebSocketHandler):
         print '!!!'
         if (len(cl) < 2):
             print 'Length of clients less than two'
-            cl[0].write_message({"status", "wait"})
+            cl[0].write_message({"status": "wait"})
         else:
             print 'Send map / start game'
             for c in cl:
                 c.write_message({
+                    "status": "start",
                     "map": maps["map_1"]
                 })
 
