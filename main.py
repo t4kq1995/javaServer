@@ -1,5 +1,8 @@
 from tornado import websocket, web, ioloop
+from tornado.options import define, options
 import json
+
+define("port", default=8888, help="run on the given port", type=int)
 
 cl = []
 
@@ -33,6 +36,7 @@ maps = {
 
 class IndexHandler(web.RequestHandler):
     def get(self):
+        print cl
         self.render("index.html")
 
 
@@ -41,6 +45,7 @@ class SocketHandler(websocket.WebSocketHandler):
         return True
 
     def check_length(self):
+        print '!!!'
         if (len(cl) < 2):
             print 'Length of clients less than two'
             cl[0].write_message({"status": "wait"})
@@ -52,6 +57,7 @@ class SocketHandler(websocket.WebSocketHandler):
                 })
 
     def open(self):
+        print 'OPEN!'
         if self not in cl:
             cl.append(self)
             self.check_length()
@@ -91,5 +97,5 @@ app = web.Application([
 ])
 
 if __name__ == '__main__':
-    app.listen(8888)
+    app.listen(options.port)
     ioloop.IOLoop.instance().start()
