@@ -46,7 +46,8 @@ class SocketHandler(websocket.WebSocketHandler):
 
     def on_message(self, message):
         for c in cl:
-            c.write_message(message)
+            if c != self:
+                c.write_message(message)
 
     def check_length(self):
         print '!!!'
