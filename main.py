@@ -5,7 +5,8 @@ import datetime
 
 define("port", default=8887, help="run on the given port", type=int)
 
-cl = []
+USERS = []
+ROOMS = []
 
 maps = {
     "map_1": [
@@ -23,11 +24,6 @@ maps = {
         ["blue", "blue", "red", "empty", "blue", "red", "red"]
     ],
     "map_3": [
-        [12, 13, 14, 16, 21, 24, 25, 27, 31, 36, 41, 42, 46, 47, 52,
-            57, 61, 63, 64, 47, 68, 72, 74, 75, 76, 79, 86, 89, 97, 98],
-        ["blue", "red", "red", "empty", "blue", "blue", "red", "red", "blue"]
-    ],
-    "map_4": [
         [12, 14, 17, 21, 23, 24, 25, 26, 32, 36, 39, 41, 42, 45, 47, 48, 52, 54,
             56, 58, 62, 63, 65, 68, 69, 71, 74, 78, 84, 85, 86, 87, 89, 93, 96, 98],
         ["red", "red", "blue", "red", "empty", "blue", "red", "blue", "blue"]
@@ -45,66 +41,73 @@ class SocketHandler(websocket.WebSocketHandler):
         return True
 
     def on_message(self, message):
-        for c in cl:
-            if c != self:
-                c.write_message(message)
+        id_room = None
+        for user in USERS:
+            if user.get("user") == self:
+                id_room = user.get("id_room")
+                break
 
-    def check_length(self):
-        print '!!!'
-        if (len(cl) < 2):
-            print 'Length of clients less than two'
-            cl[0].write_message({"status": "wait"})
+        for user in USERS:
+            if user.get("user") != self and user.get("id_room") == id_room:
+                print 'Server message : user from room ' + str(id_room) + ' was sent interesting message.'
+                user.get("user").write_message(message)
+
+    @staticmethod
+    def return_room():
+        return int(round(float(len(USERS) + 1.0) / 2.0))
+
+    @staticmethod
+    def check_status_game(id_room):
+        current_room = []
+        for user in USERS:
+            if user.get("id_room") == id_room:
+                current_room.append(user.get("user"))
+
+        if len(current_room) < 2:
+            status = "wait"
+            print 'Server message: We have only one user in room ' + str(id_room) + '. Wait...'
+            current_room[0].write_message({"status": status})
         else:
-            print 'Send map / start game'
-            for c in cl:
-                c.write_message({
-                    "status": "start",
+            status = "start"
+            print 'Server message: We have two players in room ' + str(id_room) + '. Start game.'
+            for user in current_room:
+                user.write_message({
+                    "status": status,
                     "map": maps["map_1"]
                 })
 
     def open(self):
-        print 'OPEN!'
-        if self not in cl:
+        if self not in USERS:
             self.stream.set_nodelay(True)
-            self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=60), self.explicit_close)
-            cl.append(self)
-            self.check_length()
+            self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=60),
+                                                               self.explicit_close)
+            id_room = self.return_room()
+            USERS.append({"id_room": id_room, "user": self})
+            self.check_status_game(id_room)
 
     def on_close(self):
-        if self in cl:
-            cl.remove(self)
+        id_room = None
+        for user in USERS:
+            if user.get("user") == self:
+                id_room = user.get("id_room")
+                print 'Server message: User from room ' + str(id_room) + ' was leaved. We need to leave another one.'
+                USERS.remove(user)
+                break
+
+        for user in USERS:
+            if user.get("id_room") == id_room:
+                user.get("user").write_message({"status": "close"})
+                print 'Server message: User from room ' + str(id_room) + ' was leaved. Room is empty.'
+                USERS.remove(user)
+                break
 
     def explicit_close(self):
         self.close()
 
 
-class ApiHandler(web.RequestHandler):
-    @web.asynchronous
-    def get(self, *args):
-        print 'Get value'
-        self.finish()
-        id = self.get_argument("id")
-        value = self.get_argument("value")
-        data = {"id": id, "value": value}
-        data = json.dumps(data)
-        for c in cl:
-            c.write_message(data)
-
-    @web.asynchronous
-    def post(self):
-        print 'Post value'
-        self.finish()
-        id = self.get_argument("id")
-        value = self.get_argument("value")
-        data = {"id": id, "value": value}
-        data = json.dumps(data)
-        for c in cl:
-            c.write_message(data)
-
 app = web.Application([
     (r'/', IndexHandler),
     (r'/ws', SocketHandler),
-    (r'/api', ApiHandler),
 ])
 
 if __name__ == '__main__':
