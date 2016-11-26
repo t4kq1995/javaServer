@@ -37,13 +37,16 @@ maps = {
 
 class IndexHandler(web.RequestHandler):
     def get(self):
-        print cl
         self.render("index.html")
 
 
 class SocketHandler(websocket.WebSocketHandler):
     def check_origin(self, origin):
         return True
+
+    def on_message(self, message):
+        for c in cl:
+            c.write_message(message)
 
     def check_length(self):
         print '!!!'
