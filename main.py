@@ -61,7 +61,7 @@ class SocketHandler(websocket.WebSocketHandler):
         print 'OPEN!'
         if self not in cl:
             self.stream.set_nodelay(True)
-            self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(seconds=120), self.explicit_close)
+            self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=60), self.explicit_close)
             cl.append(self)
             self.check_length()
 
