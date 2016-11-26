@@ -1,6 +1,7 @@
 from tornado import websocket, web, ioloop
 from tornado.options import define, options, parse_command_line
 import json
+import datetime
 
 define("port", default=5000, help="run on the given port", type=int)
 
@@ -59,12 +60,17 @@ class SocketHandler(websocket.WebSocketHandler):
     def open(self):
         print 'OPEN!'
         if self not in cl:
+            self.stream.set_nodelay(True)
+            self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(seconds=120), self.explicit_close)
             cl.append(self)
             self.check_length()
 
     def on_close(self):
         if self in cl:
             cl.remove(self)
+
+    def explicit_close(self):
+        self.close()
 
 
 class ApiHandler(web.RequestHandler):
