@@ -2,7 +2,7 @@ from tornado import websocket, web, ioloop
 from tornado.options import define, options
 import json
 
-define("port", default=8888, help="run on the given port", type=int)
+define("port", default=5000, help="run on the given port", type=int)
 
 cl = []
 
