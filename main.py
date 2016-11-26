@@ -1,5 +1,5 @@
 from tornado import websocket, web, ioloop
-from tornado.options import define, options
+from tornado.options import define, options, parse_command_line
 import json
 
 define("port", default=5000, help="run on the given port", type=int)
@@ -97,5 +97,6 @@ app = web.Application([
 ])
 
 if __name__ == '__main__':
+    parse_command_line()
     app.listen(options.port)
     ioloop.IOLoop.instance().start()
