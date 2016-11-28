@@ -97,16 +97,18 @@ class SocketHandler(websocket.WebSocketHandler):
 
     def on_close(self):
         id_room = None
+        color = None
         for user in USERS:
             if user.get("user") == self:
                 id_room = user.get("id_room")
+                color = user.get("color")
                 print 'Server message: User from room ' + str(id_room) + ' was leaved. We need to leave another one.'
                 USERS.remove(user)
                 break
 
         for user in USERS:
             if user.get("id_room") == id_room:
-                user.get("user").write_message({"status": "close", "color": user.get("color")})
+                user.get("user").write_message({"status": "close", "color": color})
                 print 'Server message: User from room ' + str(id_room) + ' was leaved. Room is empty.'
                 USERS.remove(user)
                 break
