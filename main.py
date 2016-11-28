@@ -2,11 +2,13 @@ from tornado import websocket, web, ioloop
 from tornado.options import define, options, parse_command_line
 import json
 import datetime
+import ast
 
 define("port", default=8887, help="run on the given port", type=int)
 
 USERS = []
 ROOMS = []
+ROOM_NUMBER = 1
 
 maps = {
     "map_1": [
@@ -41,49 +43,57 @@ class SocketHandler(websocket.WebSocketHandler):
         return True
 
     def on_message(self, message):
-        id_room = None
-        for user in USERS:
-            if user.get("user") == self:
-                id_room = user.get("id_room")
-                break
+        global ROOM_NUMBER
+        message = ast.literal_eval(message)
+        if message.get("status") == "map":
+            if ROOM_NUMBER == 1:
+                USERS.append({"id_room": ROOM_NUMBER, "user": self})
+                ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
+                ROOM_NUMBER += 1
+                self.write_message({"status": "wait"})
+                print 'Server message: we notice new room ' + str(ROOM_NUMBER - 1)
+            else:
+                was_find = False
+                for room in ROOMS:
+                    if room.get("map") == message.get("map") and room.get("users") != 2:
+                        was_find = True
+                        USERS.append({"id_room": room.get("id_room"), "user": self})
+                        room["users"] = 2
+                        for user in USERS:
+                            if user.get("id_room") == room.get("id_room"):
+                                user.get("user").write_message({
+                                    "status": "start",
+                                    "map": maps["map_" + str(room.get("map"))]
+                                })
+                        print 'Server message: game start for room ' + str(room.get("id_room"))
+                        break
+                if was_find is False:
+                    USERS.append({"id_room": ROOM_NUMBER, "user": self})
+                    ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
+                    ROOM_NUMBER += 1
+                    self.write_message({"status": "wait"})
+        else:
+            id_room = None
+            for user in USERS:
+                if user.get("user") == self:
+                    id_room = user.get("id_room")
+                    break
 
-        for user in USERS:
-            if user.get("user") != self and user.get("id_room") == id_room:
-                print 'Server message : user from room ' + str(id_room) + ' was sent interesting message.'
-                user.get("user").write_message(message)
+            for user in USERS:
+                if user.get("user") != self and user.get("id_room") == id_room:
+                    print 'Server message : user from room ' + str(id_room) + ' was sent interesting message.'
+                    user.get("user").write_message(message)
 
     @staticmethod
     def return_room():
         return int(round(float(len(USERS) + 1.0) / 2.0))
-
-    @staticmethod
-    def check_status_game(id_room):
-        current_room = []
-        for user in USERS:
-            if user.get("id_room") == id_room:
-                current_room.append(user.get("user"))
-
-        if len(current_room) < 2:
-            status = "wait"
-            print 'Server message: We have only one user in room ' + str(id_room) + '. Wait...'
-            current_room[0].write_message({"status": status})
-        else:
-            status = "start"
-            print 'Server message: We have two players in room ' + str(id_room) + '. Start game.'
-            for user in current_room:
-                user.write_message({
-                    "status": status,
-                    "map": maps["map_1"]
-                })
 
     def open(self):
         if self not in USERS:
             self.stream.set_nodelay(True)
             self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=60),
                                                                self.explicit_close)
-            id_room = self.return_room()
-            USERS.append({"id_room": id_room, "user": self})
-            self.check_status_game(id_room)
+            print 'Server message: We notice new connection'
 
     def on_close(self):
         id_room = None
@@ -99,6 +109,11 @@ class SocketHandler(websocket.WebSocketHandler):
                 user.get("user").write_message({"status": "close"})
                 print 'Server message: User from room ' + str(id_room) + ' was leaved. Room is empty.'
                 USERS.remove(user)
+                break
+
+        for room in ROOMS:
+            if room.get("id_room") == id_room:
+                ROOMS.remove(room)
                 break
 
     def explicit_close(self):
