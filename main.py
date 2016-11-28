@@ -47,7 +47,7 @@ class SocketHandler(websocket.WebSocketHandler):
         message = ast.literal_eval(message)
         if message.get("status") == "map":
             if ROOM_NUMBER == 1:
-                USERS.append({"id_room": ROOM_NUMBER, "user": self})
+                USERS.append({"id_room": ROOM_NUMBER, "user": self, "color": "red"})
                 ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
                 ROOM_NUMBER += 1
                 self.write_message({"status": "wait"})
@@ -57,7 +57,7 @@ class SocketHandler(websocket.WebSocketHandler):
                 for room in ROOMS:
                     if room.get("map") == message.get("map") and room.get("users") != 2:
                         was_find = True
-                        USERS.append({"id_room": room.get("id_room"), "user": self})
+                        USERS.append({"id_room": room.get("id_room"), "user": self, "color": "blue"})
                         room["users"] = 2
                         for user in USERS:
                             if user.get("id_room") == room.get("id_room"):
@@ -68,7 +68,7 @@ class SocketHandler(websocket.WebSocketHandler):
                         print 'Server message: game start for room ' + str(room.get("id_room"))
                         break
                 if was_find is False:
-                    USERS.append({"id_room": ROOM_NUMBER, "user": self})
+                    USERS.append({"id_room": ROOM_NUMBER, "user": self, "color": "red"})
                     ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
                     ROOM_NUMBER += 1
                     self.write_message({"status": "wait"})
@@ -106,7 +106,7 @@ class SocketHandler(websocket.WebSocketHandler):
 
         for user in USERS:
             if user.get("id_room") == id_room:
-                user.get("user").write_message({"status": "close"})
+                user.get("user").write_message({"status": "close", "color": user.get("color")})
                 print 'Server message: User from room ' + str(id_room) + ' was leaved. Room is empty.'
                 USERS.remove(user)
                 break
