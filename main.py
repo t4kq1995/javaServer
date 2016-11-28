@@ -45,14 +45,14 @@ class SocketHandler(websocket.WebSocketHandler):
     def on_message(self, message):
         global ROOM_NUMBER
         message = ast.literal_eval(message)
-        print 'Server message: we get new message with status -' + str(message.get("status"))
+        print 'Server message: We get new message with status - ' + str(message.get("status"))
         if message.get("status") == "map":
             if ROOM_NUMBER == 1:
                 USERS.append({"id_room": ROOM_NUMBER, "user": self, "color": "red"})
                 ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
                 ROOM_NUMBER += 1
                 self.write_message({"status": "wait"})
-                print 'Server message: we notice new connection to room ' + str(ROOM_NUMBER - 1)
+                print 'Server message: We notice new connection to room ' + str(ROOM_NUMBER - 1)
             else:
                 was_find = False
                 for room in ROOMS:
