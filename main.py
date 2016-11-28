@@ -45,13 +45,14 @@ class SocketHandler(websocket.WebSocketHandler):
     def on_message(self, message):
         global ROOM_NUMBER
         message = ast.literal_eval(message)
+        print 'Server message: we get new message with status -' + str(message.get("status"))
         if message.get("status") == "map":
             if ROOM_NUMBER == 1:
                 USERS.append({"id_room": ROOM_NUMBER, "user": self, "color": "red"})
                 ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
                 ROOM_NUMBER += 1
                 self.write_message({"status": "wait"})
-                print 'Server message: we notice new room ' + str(ROOM_NUMBER - 1)
+                print 'Server message: we notice new connection to room ' + str(ROOM_NUMBER - 1)
             else:
                 was_find = False
                 for room in ROOMS:
@@ -65,13 +66,14 @@ class SocketHandler(websocket.WebSocketHandler):
                                     "status": "start",
                                     "map": maps["map_" + str(room.get("map"))]
                                 })
-                        print 'Server message: game start for room ' + str(room.get("id_room"))
+                        print 'Server message: game start for users from room ' + str(room.get("id_room"))
                         break
                 if was_find is False:
                     USERS.append({"id_room": ROOM_NUMBER, "user": self, "color": "red"})
                     ROOMS.append({"id_room": ROOM_NUMBER, "map": message.get("map"), "users": 1})
                     ROOM_NUMBER += 1
                     self.write_message({"status": "wait"})
+                    print 'Server message: we notice new connection to room ' + str(ROOM_NUMBER - 1)
         else:
             id_room = None
             for user in USERS:
@@ -81,7 +83,7 @@ class SocketHandler(websocket.WebSocketHandler):
 
             for user in USERS:
                 if user.get("user") != self and user.get("id_room") == id_room:
-                    print 'Server message : user from room ' + str(id_room) + ' was sent interesting message.'
+                    print 'Server message : user from room ' + str(id_room) + ' was sent interesting message'
                     user.get("user").write_message(message)
 
     @staticmethod
@@ -116,6 +118,7 @@ class SocketHandler(websocket.WebSocketHandler):
         for room in ROOMS:
             if room.get("id_room") == id_room:
                 ROOMS.remove(room)
+                print 'Server message: We remove room ' + str(id_room)
                 break
 
     def explicit_close(self):
